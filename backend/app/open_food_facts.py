@@ -10,27 +10,36 @@ from .schemas import BebidaCreate
 OPEN_FOOD_FACTS_URL = "https://world.openfoodfacts.org/api/v2/product/{codigo}.json"
 OPEN_FOOD_FACTS_SEARCH_URL = "https://world.openfoodfacts.org/cgi/search.pl"
 OPEN_FOOD_FACTS_USER_AGENT = os.getenv("OPEN_FOOD_FACTS_USER_AGENT", "BebidasScan/0.1")
+OPEN_FOOD_FACTS_LOCALE_PARAMS = {"lc": "pt", "cc": "br"}
+OPEN_FOOD_FACTS_BRASIL_TAG = "en:brazil"
 OPEN_FOOD_FACTS_FIELDS = ",".join(
     [
         "code",
         "product_name_pt",
         "product_name",
+        "generic_name_pt",
         "generic_name",
+        "categories_pt",
         "categories",
         "categories_tags",
         "brands",
         "ingredients_text_pt",
+        "ingredients_text_with_allergens_pt",
         "ingredients_text",
+        "ingredients_text_with_allergens",
         "image_front_url",
         "image_url",
         "nutriscore_grade",
         "nova_group",
         "ecoscore_grade",
+        "allergens_pt",
         "allergens",
         "allergens_tags",
         "quantity",
+        "packaging_pt",
         "packaging",
         "packaging_tags",
+        "countries_pt",
         "countries",
         "countries_tags",
         "nutriments",
@@ -89,6 +98,17 @@ def _codigo_barras_valido(valor: object) -> Optional[str]:
     return codigo
 
 
+def _tem_tag_brasil(valor: object) -> bool:
+    if not isinstance(valor, list):
+        return False
+    return any(str(item).strip().lower() == OPEN_FOOD_FACTS_BRASIL_TAG for item in valor)
+
+
+def _produto_marcado_fora_do_brasil(produto: dict) -> bool:
+    tags = produto.get("countries_tags")
+    return isinstance(tags, list) and len(tags) > 0 and not _tem_tag_brasil(tags)
+
+
 def _classificar_tipo(categorias: str) -> Optional[str]:
     if not any(
         token in categorias
@@ -143,7 +163,12 @@ def _classificar_tipo(categorias: str) -> Optional[str]:
 
 def _bebida_create_from_produto(produto: dict, codigo_barras: str | None = None) -> Optional[BebidaCreate]:
     codigo = codigo_barras or produto.get("code")
-    nome = produto.get("product_name_pt") or produto.get("product_name") or produto.get("generic_name")
+    nome = (
+        produto.get("product_name_pt")
+        or produto.get("product_name")
+        or produto.get("generic_name_pt")
+        or produto.get("generic_name")
+    )
     if not nome:
         return None
 
@@ -153,7 +178,12 @@ def _bebida_create_from_produto(produto: dict, codigo_barras: str | None = None)
         return None
 
     marcas = produto.get("brands") or None
-    ingredientes = produto.get("ingredients_text_pt") or produto.get("ingredients_text")
+    ingredientes = (
+        produto.get("ingredients_text_pt")
+        or produto.get("ingredients_text_with_allergens_pt")
+        or produto.get("ingredients_text")
+        or produto.get("ingredients_text_with_allergens")
+    )
     imagem_url = produto.get("image_front_url") or produto.get("image_url")
     nutrimentos = produto.get("nutriments") if isinstance(produto.get("nutriments"), dict) else {}
     teor_alcoolico = _float(
@@ -174,11 +204,27 @@ def _bebida_create_from_produto(produto: dict, codigo_barras: str | None = None)
             nutri_score=_texto_limitado(produto.get("nutriscore_grade"), 10),
             nova_grupo=_inteiro(produto.get("nova_group")),
             eco_score=_texto_limitado(produto.get("ecoscore_grade"), 30),
-            alergenos=produto.get("allergens") or _texto_de_tags(produto.get("allergens_tags")),
-            categorias=produto.get("categories") or _texto_de_tags(produto.get("categories_tags")),
+            alergenos=(
+                produto.get("allergens_pt")
+                or produto.get("allergens")
+                or _texto_de_tags(produto.get("allergens_tags"))
+            ),
+            categorias=(
+                produto.get("categories_pt")
+                or produto.get("categories")
+                or _texto_de_tags(produto.get("categories_tags"))
+            ),
             quantidade=_texto_limitado(produto.get("quantity"), 80),
-            embalagem=produto.get("packaging") or _texto_de_tags(produto.get("packaging_tags")),
-            paises=produto.get("countries") or _texto_de_tags(produto.get("countries_tags")),
+            embalagem=(
+                produto.get("packaging_pt")
+                or produto.get("packaging")
+                or _texto_de_tags(produto.get("packaging_tags"))
+            ),
+            paises=(
+                produto.get("countries_pt")
+                or produto.get("countries")
+                or _texto_de_tags(produto.get("countries_tags"))
+            ),
         )
     except ValidationError as erro:
         log_event(
@@ -199,7 +245,7 @@ async def buscar_bebida_open_food_facts(codigo_barras: str) -> Optional[BebidaCr
             response = await client.get(
                 OPEN_FOOD_FACTS_URL.format(codigo=codigo_barras),
                 headers={"User-Agent": OPEN_FOOD_FACTS_USER_AGENT},
-                params={"fields": OPEN_FOOD_FACTS_FIELDS},
+                params={"fields": OPEN_FOOD_FACTS_FIELDS, **OPEN_FOOD_FACTS_LOCALE_PARAMS},
             )
     except httpx.HTTPError as erro:
         log_event(
@@ -250,6 +296,17 @@ async def buscar_bebida_open_food_facts(codigo_barras: str) -> Optional[BebidaCr
         return None
 
     produto = data.get("product") or {}
+    if _produto_marcado_fora_do_brasil(produto):
+        log_event(
+            app_logger,
+            20,
+            "open_food_facts_produto_fora_do_brasil",
+            "Produto encontrado, mas nÃ£o marcado como vendido no Brasil",
+            action="open_food_facts.lookup",
+            codigoBarras=codigo_barras,
+        )
+        return None
+
     bebida = _bebida_create_from_produto(produto, codigo_barras)
     if bebida is None:
         log_event(
@@ -282,6 +339,10 @@ async def buscar_bebidas_open_food_facts_por_nome(termo: str, limite: int = 10) 
                     "json": 1,
                     "page_size": limite,
                     "fields": OPEN_FOOD_FACTS_FIELDS,
+                    "tagtype_0": "countries",
+                    "tag_contains_0": "contains",
+                    "tag_0": "brazil",
+                    **OPEN_FOOD_FACTS_LOCALE_PARAMS,
                 },
             )
     except httpx.HTTPError as erro:
@@ -330,6 +391,8 @@ async def buscar_bebidas_open_food_facts_por_nome(termo: str, limite: int = 10) 
     codigos_vistos: set[str] = set()
     for produto in produtos:
         if not isinstance(produto, dict):
+            continue
+        if _produto_marcado_fora_do_brasil(produto):
             continue
         bebida = _bebida_create_from_produto(produto)
         if bebida is None:
