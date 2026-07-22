@@ -24,6 +24,8 @@ CAMPOS_CACHACA = {
     "lote",
 }
 
+PAISES_BRASIL = ("brazil", "brasil")
+
 
 def normalizar_payload(payload: dict) -> dict:
     for campo, valor in list(payload.items()):
@@ -54,6 +56,14 @@ def separar_payload_bebida_cachaca(payload: dict) -> tuple[dict, dict]:
     if not bebida_e_cachaca(payload.get("tipo")):
         cachaca_payload = {}
     return payload, cachaca_payload
+
+
+def bebida_externa_do_brasil(bebida: Bebida) -> bool:
+    if bebida.origem_dados != "open_food_facts":
+        return True
+
+    paises = _normalizar_termo_busca(bebida.paises or "")
+    return any(pais in paises for pais in PAISES_BRASIL)
 
 
 def salvar_cachaca(bebida: Bebida, payload: dict) -> None:
@@ -169,7 +179,7 @@ def atualizar_bebida_usuario(id_bebida: int, dados: BebidaUpdate, db: Session, u
 async def buscar_bebida_por_codigo(codigo_barras: str, db: Session) -> Bebida:
     codigo_barras = codigo_barras.strip()
     bebida = db.query(Bebida).filter(Bebida.codigo_barras == codigo_barras).first()
-    if bebida:
+    if bebida and bebida_externa_do_brasil(bebida):
         return bebida
 
     dados_externos = await buscar_bebida_open_food_facts(codigo_barras)
@@ -210,7 +220,15 @@ async def buscar_bebida_por_codigo(codigo_barras: str, db: Session) -> Bebida:
 
 def _buscar_bebidas_locais_por_nome(q: str, db: Session, limite: int = 25) -> list[Bebida]:
     q = q.strip()
-    bebidas = db.query(Bebida).filter(Bebida.nome.ilike(f"%{q}%")).order_by(Bebida.nome).limit(limite).all()
+    bebidas = [
+        bebida
+        for bebida in db.query(Bebida)
+        .filter(Bebida.nome.ilike(f"%{q}%"))
+        .order_by(Bebida.nome)
+        .limit(limite * 2)
+        .all()
+        if bebida_externa_do_brasil(bebida)
+    ][:limite]
     if len(bebidas) >= limite:
         return bebidas
 
@@ -219,6 +237,8 @@ def _buscar_bebidas_locais_por_nome(q: str, db: Session, limite: int = 25) -> li
     candidatos = db.query(Bebida).order_by(Bebida.nome).limit(300).all()
     for bebida in candidatos:
         if bebida.id_bebida in ids:
+            continue
+        if not bebida_externa_do_brasil(bebida):
             continue
         texto = " ".join(
             str(valor or "")
@@ -290,7 +310,7 @@ async def buscar_bebidas_por_nome(q: str, db: Session) -> list[Bebida]:
             existente = db.query(Bebida).filter(Bebida.codigo_barras == codigo).first()
             if existente:
                 codigos_locais.add(codigo)
-                if existente.id_bebida not in ids_locais:
+                if existente.id_bebida not in ids_locais and bebida_externa_do_brasil(existente):
                     bebidas.append(existente)
                     ids_locais.add(existente.id_bebida)
                 continue
