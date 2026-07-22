@@ -4,6 +4,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'pages/bebida_form_page.dart';
 import 'pages/bebida_page.dart';
 import 'pages/bottle_ocr_page.dart';
+import 'pages/change_password_page.dart';
+import 'pages/forgot_password_page.dart';
 import 'pages/home_page.dart';
 import 'pages/lgpd_accept_page.dart';
 import 'pages/login_page.dart';
@@ -116,6 +118,8 @@ class BebidasScanApp extends StatelessWidget {
         '/': (context) => const SplashPage(),
         '/onboarding': (context) => const OnboardingPage(),
         '/login': (context) => const LoginPage(),
+        '/recuperar-senha': (context) => const ForgotPasswordPage(),
+        '/alterar-senha': (context) => const ChangePasswordPage(),
         '/registrar': (context) => const RegisterPage(),
         '/lgpd-aceitar': (context) => const LgpdAcceptPage(),
         '/documento-privacidade': (context) => const PrivacyDocumentPage(),

@@ -212,6 +212,10 @@ class _LoginPageState extends State<LoginPage> {
               onPressed: () => Navigator.pushNamed(context, '/registrar'),
               child: const Text('Criar conta'),
             ),
+            TextButton(
+              onPressed: () => Navigator.pushNamed(context, '/recuperar-senha'),
+              child: const Text('Esqueci minha senha'),
+            ),
           ],
         ),
       ),

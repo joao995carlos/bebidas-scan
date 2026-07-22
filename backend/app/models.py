@@ -41,6 +41,20 @@ class RefreshToken(Base):
     usuario = relationship("Usuario")
 
 
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_token"
+
+    id_reset = Column(Integer, primary_key=True, index=True)
+    id_usuario = Column(Integer, ForeignKey("usuario.id_usuario"), nullable=False)
+    token_hash = Column(String(64), unique=True, index=True, nullable=False)
+    expiracao = Column(DateTime, nullable=False)
+    usado = Column(Boolean, default=False, nullable=False)
+    usado_em = Column(DateTime)
+    criado_em = Column(DateTime, server_default=func.now())
+
+    usuario = relationship("Usuario")
+
+
 class Bebida(Base):
     __tablename__ = "bebida"
 

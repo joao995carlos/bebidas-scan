@@ -6,6 +6,7 @@ from html import escape
 from urllib.parse import quote
 
 from fastapi import APIRouter, Cookie, Depends, Form, HTTPException, Query, Request, status
+from pydantic import ValidationError
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -18,6 +19,8 @@ from .lgpd import (
     termos_uso_texto,
 )
 from .models import Bebida, Cachaca, Usuario
+from .schemas import ConfirmarResetSenhaRequest
+from .services.auth_service import confirmar_reset_senha
 from .services.web_service import (
     aceitar_lgpd_web,
     anonimizar_conta_web,
@@ -180,7 +183,9 @@ def _emitir_tokens_web(db: Session, usuario: Usuario) -> tuple[str, str]:
 
 @router.get("", include_in_schema=False)
 def web_raiz():
-    return render_web_layout(title, content, usuario, _csrf_input(refresh_token) if usuario else "")
+    return RedirectResponse("/web/", status_code=303)
+
+
 @router.get("/", response_class=HTMLResponse)
 def home(
     q: str = Query("", max_length=80),
@@ -204,6 +209,65 @@ def login_form(usuario: Usuario | None = Depends(usuario_web_opcional)):
         destino = "/web/lgpd/aceitar" if lgpd_pendente(usuario) else "/web/"
         return RedirectResponse(destino, status_code=303)
     return _layout("Entrar", render_login_form())
+
+
+def _reset_senha_form(token: str, mensagem: str = "", erro: str = "") -> str:
+    mensagem_html = f'<p class="success">{escape(mensagem)}</p>' if mensagem else ""
+    erro_html = f'<p class="error">{escape(erro)}</p>' if erro else ""
+    if mensagem:
+        return f"""
+<section class="panel">
+  <h2>Redefinir senha</h2>
+  {mensagem_html}
+  <p class="actions"><a class="button" href="/web/login">Ir para o login</a></p>
+</section>
+"""
+    return f"""
+<section class="panel">
+  <h2>Redefinir senha</h2>
+  {mensagem_html}
+  {erro_html}
+  <form method="post" action="/web/resetar-senha">
+    <input type="hidden" name="token" value="{escape(token)}">
+    <label for="nova_senha">Nova senha</label>
+    <input id="nova_senha" name="nova_senha" type="password" required minlength="8" maxlength="100" autocomplete="new-password">
+    <p class="muted">Use pelo menos 8 caracteres, uma letra maiúscula, um número e um caractere especial.</p>
+    <button type="submit">Salvar nova senha</button>
+  </form>
+</section>
+"""
+
+
+@router.get("/resetar-senha", response_class=HTMLResponse)
+def reset_senha_form(token: str = Query("", min_length=1, max_length=300)):
+    return _layout("Redefinir senha", _reset_senha_form(token))
+
+
+@router.post("/resetar-senha", response_class=HTMLResponse)
+def reset_senha_post(
+    token: str = Form(...),
+    nova_senha: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    try:
+        confirmar_reset_senha(
+            ConfirmarResetSenhaRequest(token=token, nova_senha=nova_senha),
+            db,
+        )
+    except HTTPException as erro:
+        return _layout("Redefinir senha", _reset_senha_form(token, erro=str(erro.detail)))
+    except ValidationError:
+        return _layout(
+            "Redefinir senha",
+            _reset_senha_form(
+                token,
+                erro="Use uma senha com pelo menos 8 caracteres, uma letra maiúscula, um número e um caractere especial.",
+            ),
+        )
+    return _layout(
+        "Redefinir senha",
+        _reset_senha_form("", mensagem="Senha redefinida com sucesso. Volte ao app e entre novamente."),
+    )
 
 
 @router.post("/login")

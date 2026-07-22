@@ -3,6 +3,7 @@ import tempfile
 import uuid
 import logging
 import re
+from datetime import datetime, timedelta, timezone
 
 os.environ["JWT_SECRET_KEY"] = "x" * 64
 os.environ["WEB_CSRF_SECRET"] = "w" * 64
@@ -21,9 +22,11 @@ os.environ["DATABASE_URL"] = "sqlite:///" + db_path.replace("\\", "/")
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from app.database import Base, engine  # noqa: E402
+from app.database import Base, SessionLocal, engine  # noqa: E402
 from app.logging_config import JsonFormatter  # noqa: E402
 from app.main import app  # noqa: E402
+from app.models import PasswordResetToken  # noqa: E402
+from app.security import criar_refresh_token, hash_token  # noqa: E402
 
 
 Base.metadata.create_all(bind=engine)
@@ -209,6 +212,91 @@ def test_cadastro_rejeita_senha_fraca_e_email_invalido():
         },
     )
     assert email_invalido.status_code == 422
+
+
+def test_alterar_senha_exige_senha_atual_e_revoga_senha_antiga():
+    email = f"alterar-senha-{uuid.uuid4().hex}@example.com"
+    usuario = registrar_usuario(email, "Senha@123")
+    headers = auth_headers(usuario["access_token"])
+
+    senha_errada = client.post(
+        "/auth/alterar-senha",
+        headers=headers,
+        json={"senha_atual": "Errada@123", "nova_senha": "Nova@123"},
+    )
+    assert senha_errada.status_code == 403
+
+    alterada = client.post(
+        "/auth/alterar-senha",
+        headers=headers,
+        json={"senha_atual": "Senha@123", "nova_senha": "Nova@123"},
+    )
+    assert alterada.status_code == 200
+
+    login_antigo = client.post(
+        "/auth/login",
+        json={"identificador": email, "senha": "Senha@123"},
+    )
+    assert login_antigo.status_code == 401
+
+    login_novo = client.post(
+        "/auth/login",
+        json={"identificador": email, "senha": "Nova@123"},
+    )
+    assert login_novo.status_code == 200
+
+
+def test_solicitar_reset_senha_resposta_generica_e_email_nao_configurado():
+    email_inexistente = f"inexistente-{uuid.uuid4().hex}@example.com"
+    inexistente = client.post("/auth/solicitar-reset-senha", json={"email": email_inexistente})
+    assert inexistente.status_code == 200
+    assert "Se o e-mail existir" in inexistente.json()["detail"]
+
+    email = f"reset-sem-email-{uuid.uuid4().hex}@example.com"
+    registrar_usuario(email)
+    existente = client.post("/auth/solicitar-reset-senha", json={"email": email})
+    assert existente.status_code == 503
+    assert "e-mail ainda não configurado" in existente.json()["detail"]
+
+
+def test_confirmar_reset_senha_troca_senha_e_bloqueia_reuso():
+    email = f"reset-token-{uuid.uuid4().hex}@example.com"
+    usuario = registrar_usuario(email, "Senha@123")
+    token = criar_refresh_token()
+
+    with SessionLocal() as db:
+        db.add(
+            PasswordResetToken(
+                id_usuario=usuario["usuario"]["id_usuario"],
+                token_hash=hash_token(token),
+                expiracao=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=30),
+            )
+        )
+        db.commit()
+
+    confirmado = client.post(
+        "/auth/confirmar-reset-senha",
+        json={"token": token, "nova_senha": "Reset@123"},
+    )
+    assert confirmado.status_code == 200
+
+    reuso = client.post(
+        "/auth/confirmar-reset-senha",
+        json={"token": token, "nova_senha": "Outra@123"},
+    )
+    assert reuso.status_code == 400
+
+    login_antigo = client.post(
+        "/auth/login",
+        json={"identificador": email, "senha": "Senha@123"},
+    )
+    assert login_antigo.status_code == 401
+
+    login_novo = client.post(
+        "/auth/login",
+        json={"identificador": email, "senha": "Reset@123"},
+    )
+    assert login_novo.status_code == 200
 
 
 def test_web_cadastro_rejeita_email_invalido_e_senha_fraca():

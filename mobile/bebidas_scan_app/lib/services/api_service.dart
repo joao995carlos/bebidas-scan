@@ -119,6 +119,20 @@ class ApiService {
     return dio.post('/auth/logout', data: {'refresh_token': refreshToken});
   }
 
+  Future<Response> alterarSenha({
+    required String senhaAtual,
+    required String novaSenha,
+  }) {
+    return dio.post(
+      '/auth/alterar-senha',
+      data: {'senha_atual': senhaAtual, 'nova_senha': novaSenha},
+    );
+  }
+
+  Future<Response> solicitarResetSenha(String email) {
+    return dio.post('/auth/solicitar-reset-senha', data: {'email': email});
+  }
+
   Future<Response> perfil() {
     return dio.get('/perfil/me');
   }

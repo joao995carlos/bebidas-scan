@@ -38,9 +38,14 @@ CORS_ORIGINS=https://seudominio.com.br,https://www.seudominio.com.br,https://api
 WEB_COOKIE_SECURE=true
 TRUST_PROXY_HEADERS=true
 FORWARDED_ALLOW_IPS=*
+RESEND_API_KEY=re_sua_chave
+EMAIL_FROM=Bebidas Scan <nao-responda@bebidasscan.com.br>
+PASSWORD_RESET_BASE_URL=https://api.bebidasscan.com.br/web/resetar-senha
 ```
 
 Use `FORWARDED_ALLOW_IPS=*` apenas quando o acesso público passar exclusivamente por um proxy confiável, como Cloudflare Tunnel. Se a porta da API ficar aberta diretamente na internet, restrinja esse valor aos IPs do proxy.
+
+Para recuperacao de senha, crie e verifique `bebidasscan.com.br` no Resend. Depois copie para a Cloudflare os registros DNS exibidos pelo Resend e crie uma API key. O remetente em `EMAIL_FROM` precisa usar um dominio verificado.
 
 Depois reconstrua:
 

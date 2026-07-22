@@ -43,12 +43,27 @@ TRUST_PROXY_HEADERS=true
 CORS_ORIGINS=https://seudominio.com.br,https://www.seudominio.com.br,https://api.seudominio.com.br
 ```
 
+## E-mail com Resend
+
+O backend usa o Resend para enviar links de recuperacao de senha. Configure o dominio no painel do Resend, copie os registros DNS exatamente como ele mostrar para o DNS da Cloudflare e, depois da verificacao, preencha:
+
+```env
+RESEND_API_KEY=re_sua_chave
+EMAIL_FROM=Bebidas Scan <nao-responda@bebidasscan.com.br>
+PASSWORD_RESET_BASE_URL=https://api.bebidasscan.com.br/web/resetar-senha
+```
+
+Nao grave a chave `RESEND_API_KEY` no Git. Ela deve ficar somente no `.env`, `.env.docker` ou no provedor de hospedagem.
+
 ## Rotas principais
 
 - `POST /auth/registrar`
 - `POST /auth/login`
 - `POST /auth/refresh`
 - `POST /auth/logout`
+- `POST /auth/alterar-senha`
+- `POST /auth/solicitar-reset-senha`
+- `POST /auth/confirmar-reset-senha`
 - `GET /perfil/me`
 - `GET /bebidas/codigo/{codigo_barras}`
 - `POST /bebidas`

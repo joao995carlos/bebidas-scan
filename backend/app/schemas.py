@@ -67,6 +67,28 @@ class RefreshRequest(BaseModel):
     refresh_token: str = Field(min_length=20, max_length=300)
 
 
+class AlterarSenhaRequest(BaseModel):
+    senha_atual: str = Field(min_length=1, max_length=100)
+    nova_senha: str = Field(min_length=8, max_length=100)
+
+    @field_validator("nova_senha")
+    def nova_senha_forte(cls, senha: str) -> str:
+        return validar_senha_forte(senha)
+
+
+class SolicitarResetSenhaRequest(BaseModel):
+    email: EmailStr
+
+
+class ConfirmarResetSenhaRequest(BaseModel):
+    token: str = Field(min_length=20, max_length=300)
+    nova_senha: str = Field(min_length=8, max_length=100)
+
+    @field_validator("nova_senha")
+    def reset_senha_forte(cls, senha: str) -> str:
+        return validar_senha_forte(senha)
+
+
 class LGPDAceiteRequest(BaseModel):
     data_nascimento: date
     aceitou_privacidade: bool

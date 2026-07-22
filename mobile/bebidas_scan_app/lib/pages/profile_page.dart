@@ -190,6 +190,12 @@ class _ProfileContentState extends State<ProfileContent> {
               Text('Nome: ${dados?['nome'] ?? 'Não informado'}'),
               Text('Usuário: ${dados?['nome_usuario'] ?? 'Não informado'}'),
               Text('E-mail: ${dados?['email'] ?? 'Não informado'}'),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.pushNamed(context, '/alterar-senha'),
+                icon: const Icon(Icons.lock_reset),
+                label: const Text('Alterar senha'),
+              ),
             ],
           ),
         if (!convidado)
