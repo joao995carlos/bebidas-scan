@@ -1,0 +1,1088 @@
+BEBIDAS SCAN - DOCUMENTACAO COMPLETA DO PROJETO
+Atualizado em: 2026-07-02
+
+1. VISAO GERAL
+
+O Bebidas Scan e um aplicativo Android feito em Flutter para escanear bebidas por codigo de barras, consultar informacoes do produto, visualizar detalhes, avaliar, favoritar e registrar precos.
+
+O projeto tem duas partes principais:
+
+1) Backend
+   API propria feita em FastAPI, responsavel por usuarios, login, tokens, bebidas, avaliacoes, favoritos, precos e integracao com Open Food Facts.
+
+2) Mobile
+   Aplicativo Flutter Android, responsavel pela interface, login/cadastro, modo convidado, scanner de codigo de barras, busca manual, detalhes da bebida, avaliacao e favorito.
+
+Atualmente o backend tambem esta preparado para rodar em Docker junto com um banco PostgreSQL em outro container. Antes disso, durante desenvolvimento local, tambem foi usado SQLite.
+
+
+2. OBJETIVO DO APP
+
+O objetivo do Bebidas Scan e permitir que uma pessoa:
+
+- abra o app no celular;
+- entre com conta, crie conta ou continue como convidado;
+- escaneie o codigo de barras de uma bebida;
+- busque os dados dessa bebida na API propria;
+- caso a bebida nao exista na base local, tentar buscar dados no Open Food Facts;
+- visualizar nome, marca, tipo, codigo de barras, ingredientes e imagem;
+- avaliar uma bebida com nota, comentario e "compraria novamente";
+- favoritar bebidas;
+- registrar e consultar precos no backend.
+
+
+3. ESTRUTURA GERAL DE PASTAS
+
+Raiz do projeto:
+
+C:\Users\jcons\Documents\Bebidas Scan
+
+Principais arquivos e pastas:
+
+- README.md
+  Documentacao resumida do projeto.
+
+- docker-compose.yml
+  Sobe a API FastAPI e o banco PostgreSQL em containers.
+
+- .env.docker.example
+  Exemplo de variaveis de ambiente para Docker.
+
+- backend/
+  Codigo da API FastAPI.
+
+- mobile/bebidas_scan_app/
+  Codigo do app Flutter Android.
+
+
+4. BACKEND
+
+O backend fica em:
+
+backend/
+
+Tecnologias usadas:
+
+- FastAPI
+  Framework web Python usado para criar a API HTTP.
+
+- Uvicorn
+  Servidor ASGI usado para rodar o FastAPI.
+
+- SQLAlchemy
+  ORM usado para mapear as tabelas do banco.
+
+- Pydantic
+  Validacao e serializacao dos dados de entrada e saida da API.
+
+- PostgreSQL
+  Banco principal quando o projeto roda com Docker.
+
+- SQLite
+  Banco usado anteriormente em desenvolvimento local.
+
+- PyJWT
+  Criacao e validacao dos tokens JWT.
+
+- pwdlib[argon2]
+  Hash de senha usando Argon2.
+
+- httpx
+  Cliente HTTP usado para chamar a API externa Open Food Facts.
+
+- python-dotenv
+  Leitura de variaveis de ambiente em ambiente local.
+
+Arquivos principais do backend:
+
+- backend/app/main.py
+  Cria o app FastAPI, configura CORS, cria as tabelas automaticamente e registra os routers.
+
+- backend/app/database.py
+  Configura DATABASE_URL, engine SQLAlchemy, SessionLocal e Base.
+
+- backend/app/models.py
+  Define as tabelas do banco.
+
+- backend/app/schemas.py
+  Define os schemas Pydantic de entrada e saida.
+
+- backend/app/security.py
+  Cria/verifica senha, access token, refresh token e hash de token.
+
+- backend/app/dependencies.py
+  Define dependencia de usuario logado via Authorization Bearer token.
+
+- backend/app/routes_auth.py
+  Cadastro, login, refresh token e logout.
+
+- backend/app/routes_bebidas.py
+  Cadastro de bebida, busca por codigo e busca por nome.
+
+- backend/app/routes_avaliacoes.py
+  Criacao/atualizacao de avaliacao e listagem das minhas avaliacoes.
+
+- backend/app/routes_favoritos.py
+  Listar, favoritar e remover favorito.
+
+- backend/app/routes_precos.py
+  Registrar preco e listar precos de uma bebida.
+
+- backend/app/routes_perfil.py
+  Retorna o perfil do usuario logado.
+
+- backend/app/open_food_facts.py
+  Busca bebida na API externa Open Food Facts.
+
+
+5. API PROPRIA
+
+A API propria e a API FastAPI do projeto. Ela roda por padrao em:
+
+http://localhost:8000
+
+Quando acessivel pela rede local, pode ser chamada por:
+
+http://IP_DO_COMPUTADOR:8000
+
+Quando no futuro for publicada com dominio ou Cloudflare Tunnel, a ideia e usar uma URL HTTPS fixa, por exemplo:
+
+https://api.seudominio.com
+
+Documentacao interativa:
+
+http://localhost:8000/docs
+
+Healthcheck:
+
+GET /
+
+Resposta esperada:
+
+{"app":"Bebidas Scan API","status":"ok"}
+
+
+6. ROTAS PRINCIPAIS DA API
+
+Autenticacao:
+
+- POST /auth/registrar
+  Cria usuario e retorna access token, refresh token e dados do usuario.
+
+- POST /auth/login
+  Faz login com email e senha e retorna access token, refresh token e dados do usuario.
+
+- POST /auth/refresh
+  Recebe refresh token e retorna novo access token.
+
+- POST /auth/logout
+  Revoga o refresh token informado.
+
+Perfil:
+
+- GET /perfil/me
+  Retorna dados do usuario logado.
+
+Bebidas:
+
+- POST /bebidas
+  Cria bebida manualmente. Exige usuario logado.
+
+- GET /bebidas/codigo/{codigo_barras}
+  Busca bebida por codigo de barras. Primeiro procura no banco local. Se nao encontrar, tenta Open Food Facts.
+
+- GET /bebidas/buscar?q=termo
+  Busca bebidas por nome.
+
+Avaliacoes:
+
+- POST /avaliacoes
+  Cria ou atualiza avaliacao do usuario para uma bebida.
+
+- GET /avaliacoes/minhas
+  Lista avaliacoes do usuario logado.
+
+Favoritos:
+
+- GET /favoritos
+  Lista favoritos do usuario logado.
+
+- POST /favoritos/{id_bebida}
+  Favorita uma bebida.
+
+- DELETE /favoritos/{id_bebida}
+  Remove uma bebida dos favoritos.
+
+Precos:
+
+- POST /precos
+  Registra preco de uma bebida.
+
+- GET /precos/bebida/{id_bebida}
+  Lista os ultimos precos registrados para uma bebida.
+
+
+7. AUTENTICACAO E SEGURANCA
+
+O app usa autenticacao por JWT.
+
+Fluxo:
+
+1) Usuario registra ou faz login.
+2) Backend retorna:
+   - access_token;
+   - refresh_token;
+   - token_type;
+   - usuario.
+3) App salva os tokens com Flutter Secure Storage.
+4) Em chamadas protegidas, app envia:
+   Authorization: Bearer ACCESS_TOKEN
+5) Se o access token expirar, o app tenta renovar com /auth/refresh.
+6) Se a renovacao falhar, o app limpa os tokens locais.
+
+Senha:
+
+- A senha nunca e salva em texto puro.
+- O backend salva apenas senha_hash.
+- O hash e feito com pwdlib[argon2].
+
+Refresh token:
+
+- O refresh token em si nao e salvo direto no banco.
+- O backend salva o hash SHA-256 do refresh token.
+- O token pode ser revogado no logout.
+
+Variaveis importantes:
+
+- JWT_SECRET_KEY
+- JWT_ALGORITHM
+- ACCESS_TOKEN_EXPIRE_MINUTES
+- REFRESH_TOKEN_EXPIRE_DAYS
+
+Observacao:
+
+Nao colocar valores reais de JWT_SECRET_KEY ou senhas dentro de documentacao publica ou repositorio publico.
+
+
+8. BANCO DE DADOS
+
+O projeto usa SQLAlchemy para definir as tabelas.
+
+Tabelas atuais:
+
+1) usuario
+
+Campos principais:
+
+- id_usuario
+- nome
+- email
+- senha_hash
+- data_nascimento
+- confirmou_maioridade
+- email_verificado
+- ativo
+- data_criacao
+
+Uso:
+
+Armazena os usuarios do app.
+
+2) refresh_token
+
+Campos principais:
+
+- id_token
+- id_usuario
+- token_hash
+- expiracao
+- revogado
+- criado_em
+- revogado_em
+
+Uso:
+
+Armazena refresh tokens de forma segura, usando hash do token.
+
+3) bebida
+
+Campos principais:
+
+- id_bebida
+- nome
+- marca
+- tipo
+- codigo_barras
+- teor_alcoolico
+- ingredientes
+- imagem_url
+- origem_dados
+- criada_em
+
+Uso:
+
+Armazena bebidas cadastradas manualmente ou importadas do Open Food Facts.
+
+4) avaliacao
+
+Campos principais:
+
+- id_avaliacao
+- id_usuario
+- id_bebida
+- nota
+- comentario
+- compraria_novamente
+- data_avaliacao
+
+Regras:
+
+- nota precisa estar entre 1 e 5;
+- cada usuario so pode ter uma avaliacao por bebida;
+- se avaliar de novo, a avaliacao existente e atualizada.
+
+5) favorito
+
+Campos principais:
+
+- id_favorito
+- id_usuario
+- id_bebida
+- data_favorito
+
+Regras:
+
+- cada usuario so pode favoritar a mesma bebida uma vez.
+
+6) preco
+
+Campos principais:
+
+- id_preco
+- id_usuario
+- id_bebida
+- mercado
+- cidade
+- estado
+- valor
+- data_registro
+
+Regras:
+
+- valor precisa ser maior ou igual a zero.
+
+
+9. API EXTERNA OPEN FOOD FACTS
+
+O projeto usa a API publica Open Food Facts para tentar buscar dados de bebidas por codigo de barras quando a bebida ainda nao existe no banco local.
+
+Endpoint usado:
+
+https://world.openfoodfacts.org/api/v2/product/{codigo}.json
+
+Fluxo:
+
+1) App envia codigo de barras para:
+   GET /bebidas/codigo/{codigo_barras}
+
+2) Backend procura no banco local.
+
+3) Se encontrar, retorna a bebida local.
+
+4) Se nao encontrar, backend chama Open Food Facts.
+
+5) Se Open Food Facts retornar produto valido:
+   - backend extrai nome;
+   - marca;
+   - ingredientes;
+   - imagem;
+   - categoria/tipo aproximado;
+   - codigo de barras.
+
+6) Backend salva a bebida no banco com origem_dados = "open_food_facts".
+
+7) Backend retorna a bebida para o app.
+
+Tratamento de erro:
+
+- Se Open Food Facts estiver fora do ar, der timeout, retornar erro HTTP ou JSON invalido, o backend retorna None internamente.
+- Se nenhum produto for encontrado, a API propria responde 404 com "Bebida nao encontrada".
+
+
+10. MOBILE FLUTTER
+
+O app fica em:
+
+mobile/bebidas_scan_app/
+
+Tecnologias e pacotes principais:
+
+- Flutter
+  Framework do app Android.
+
+- Material 3
+  Base visual usada no app.
+
+- dio
+  Cliente HTTP para falar com a API.
+
+- flutter_secure_storage
+  Armazenamento seguro dos tokens no celular.
+
+- camera
+  Preview da camera, captura de foto e controle de flash/lanterna.
+
+- ML Kit Barcode Scanning nativo Android
+  Usado via Kotlin para ler codigo de barras da imagem capturada.
+
+Arquivos principais:
+
+- lib/main.dart
+  Configura o MaterialApp, tema e rotas.
+
+- lib/services/api_service.dart
+  Centraliza as chamadas HTTP para a API.
+
+- lib/services/token_service.dart
+  Salva, le e limpa access token e refresh token.
+
+- lib/pages/splash_page.dart
+  Verifica sessao ao abrir o app.
+
+- lib/pages/login_page.dart
+  Login e entrada como convidado.
+
+- lib/pages/register_page.dart
+  Criacao de conta.
+
+- lib/pages/home_page.dart
+  Tela principal, busca por nome e entrada no scanner.
+
+- lib/pages/scanner_page.dart
+  Tela de camera, leitura por botao e busca manual por codigo.
+
+- lib/pages/bebida_page.dart
+  Detalhes da bebida, favoritar e avaliar.
+
+Rotas Flutter:
+
+- /
+  SplashPage
+
+- /login
+  LoginPage
+
+- /registrar
+  RegisterPage
+
+- /home
+  HomePage
+
+- /scanner
+  ScannerPage
+
+- /bebida
+  BebidaPage
+
+
+11. FUNCIONALIDADES DO APP
+
+Funcionalidades ja implementadas:
+
+1) Splash e verificacao de sessao
+
+- Ao abrir, o app tenta chamar /perfil/me.
+- Se conseguir, vai para Home.
+- Se falhar, vai para Login.
+
+2) Login
+
+- Usuario informa email e senha.
+- App chama POST /auth/login.
+- Se der certo, salva access token e refresh token.
+- Depois navega para Home.
+
+3) Cadastro
+
+- Usuario informa nome, email, senha e confirma maioridade.
+- App chama POST /auth/registrar.
+- Se der certo, salva tokens e navega para Home.
+
+4) Modo convidado
+
+- Usuario pode continuar sem conta.
+- App limpa tokens locais.
+- Usuario consegue usar busca e scanner.
+- Para avaliar e favoritar, o app exige login.
+
+5) Logout
+
+- App chama /auth/logout quando existe refresh token.
+- Mesmo se a API falhar, app limpa tokens locais.
+- Depois volta para Login.
+
+6) Busca por nome
+
+- Na Home, usuario digita o nome da bebida.
+- App chama GET /bebidas/buscar?q=termo.
+- Lista resultados.
+- Ao tocar, abre detalhes da bebida.
+
+7) Scanner por camera
+
+- App abre preview da camera traseira.
+- Usuario aponta para o codigo de barras.
+- Usuario toca em "Ler codigo".
+- App tira uma foto temporaria.
+- A foto e enviada para leitura nativa Android via MethodChannel.
+- Se detectar codigo, app chama GET /bebidas/codigo/{codigo}.
+- Se encontrar, abre detalhes.
+- Se nao encontrar, mostra mensagem.
+
+8) Busca manual por codigo
+
+- Na tela do scanner existe campo "Codigo de barras".
+- Usuario pode digitar o codigo manualmente.
+- Isso usa o mesmo fluxo de busca por codigo.
+
+9) Detalhes da bebida
+
+Mostra:
+
+- imagem, quando disponivel;
+- nome;
+- marca;
+- tipo;
+- codigo de barras;
+- ingredientes.
+
+10) Avaliacao
+
+- Usuario escolhe nota de 1 a 5.
+- Pode escrever comentario.
+- Pode marcar "Compraria novamente?".
+- Exige conta.
+- App chama POST /avaliacoes.
+
+11) Favorito
+
+- Usuario toca no icone de favorito.
+- Exige conta.
+- App chama POST /favoritos/{id_bebida}.
+
+12) Registro de preco
+
+- Backend ja possui rotas para registrar e listar precos.
+- A interface mobile para registrar preco ainda nao esta implementada de forma completa.
+
+
+12. SCANNER DE CODIGO DE BARRAS
+
+Historico tecnico:
+
+1) Primeira abordagem:
+   Foi usado mobile_scanner.
+
+2) Problema:
+   No Galaxy S25 / Android 16, a camera nao abria corretamente ou gerava erro nativo:
+   Attempt to invoke virtual method ... on a null object reference
+
+3) Segunda abordagem:
+   Troca para camera + google_mlkit_barcode_scanning no Dart com stream de frames.
+
+4) Problema:
+   O preview passou a aparecer, mas o processamento de frame bruto gerava erro de conversao InputImage.
+
+5) Terceira abordagem:
+   Manter camera para preview e usar takePicture + InputImage.fromFilePath no Dart.
+
+6) Problema:
+   O plugin Flutter do ML Kit ainda gerava erro nativo durante processImage.
+
+7) Solucao atual:
+   Manter camera no Flutter para preview e foto, mas fazer a leitura no Android nativo em Kotlin usando ML Kit Barcode Scanning diretamente.
+
+Implementacao atual:
+
+- Flutter tira a foto com camera.
+- Flutter chama MethodChannel:
+  bebidas_scan/native_barcode
+
+- Metodo chamado:
+  scanImageFile
+
+- Parametro:
+  path da foto temporaria.
+
+- Android nativo:
+  MainActivity.kt recebe o caminho da imagem.
+
+- Kotlin cria:
+  InputImage.fromFilePath(...)
+
+- Kotlin usa:
+  BarcodeScanning.getClient(...)
+
+- Kotlin retorna o primeiro rawValue encontrado.
+
+Formatos suportados:
+
+- EAN-13
+- EAN-8
+- UPC-A
+- UPC-E
+- Code 128
+
+Comportamento:
+
+- Se detectar codigo, app busca produto.
+- Se nao detectar, mostra:
+  Codigo nao detectado. Aproxime, foque melhor e tente novamente.
+
+- Se der erro de camera, mostra mensagem clara.
+
+- A busca manual permanece disponivel como fallback.
+
+
+13. ANDROID NATIVO
+
+Arquivo principal:
+
+mobile/bebidas_scan_app/android/app/src/main/kotlin/com/example/bebidas_scan_app/MainActivity.kt
+
+Responsabilidades:
+
+- Configurar MethodChannel.
+- Receber caminho da foto.
+- Usar ML Kit nativo para ler codigo.
+- Retornar codigo para Flutter.
+
+Dependencia Android adicionada:
+
+com.google.mlkit:barcode-scanning:17.3.0
+
+Arquivo:
+
+mobile/bebidas_scan_app/android/app/build.gradle.kts
+
+Config release:
+
+- minify desativado;
+- shrinkResources desativado;
+- se existir key.properties, usa assinatura release;
+- se nao existir, usa assinatura debug como fallback.
+
+Permissoes Android:
+
+Arquivo:
+
+mobile/bebidas_scan_app/android/app/src/main/AndroidManifest.xml
+
+Permissoes:
+
+- android.permission.CAMERA
+- android.permission.INTERNET
+
+Tambem esta configurado:
+
+- android:usesCleartextTraffic="true"
+
+Motivo:
+
+Permitir HTTP local durante testes com backend no computador, por exemplo:
+
+http://192.168.x.x:8000
+
+Em producao com dominio HTTPS, isso pode ser revisto.
+
+
+14. API_BASE_URL NO APK
+
+O app usa a constante:
+
+API_BASE_URL
+
+Ela e definida no build com:
+
+--dart-define=API_BASE_URL=...
+
+Exemplo para rede local:
+
+flutter build apk --release --dart-define=API_BASE_URL=http://SEU_IP:8000
+
+Exemplo futuro com dominio:
+
+flutter build apk --release --dart-define=API_BASE_URL=https://api.seudominio.com
+
+Valor padrao atual no codigo:
+
+http://SEU_IP_LOCAL:8000
+
+Observacao:
+
+Para outro computador, outra rede, VPS ou Cloudflare Tunnel, o APK precisa ser gerado apontando para a URL correta.
+
+
+15. DOCKER
+
+O projeto possui Docker para rodar backend e banco juntos.
+
+Arquivos:
+
+- backend/Dockerfile
+- backend/.dockerignore
+- docker-compose.yml
+- .env.docker.example
+
+Servicos do docker-compose:
+
+1) db
+
+- imagem: postgres:16-alpine;
+- cria banco PostgreSQL;
+- usa variaveis:
+  POSTGRES_DB
+  POSTGRES_USER
+  POSTGRES_PASSWORD
+
+- usa volume:
+  bebidas_postgres_data
+
+- possui healthcheck com pg_isready.
+
+2) api
+
+- build a partir de backend/Dockerfile;
+- roda FastAPI com Uvicorn;
+- depende do banco estar healthy;
+- expoe porta:
+  API_PORT:8000
+
+- usa variaveis:
+  DATABASE_URL
+  JWT_SECRET_KEY
+  JWT_ALGORITHM
+  ACCESS_TOKEN_EXPIRE_MINUTES
+  REFRESH_TOKEN_EXPIRE_DAYS
+
+Comando para criar arquivo de ambiente:
+
+Copy-Item .env.docker.example .env.docker
+
+Comando para subir:
+
+docker compose --env-file .env.docker up --build
+
+Comando para subir em segundo plano:
+
+docker compose --env-file .env.docker up -d --build
+
+Comando para ver status:
+
+docker compose --env-file .env.docker ps
+
+Comando para parar sem apagar banco:
+
+docker compose --env-file .env.docker down
+
+Comando para parar e apagar banco/volume:
+
+docker compose --env-file .env.docker down -v
+
+Comando para testar API:
+
+Invoke-RestMethod http://localhost:8000/
+
+URL da documentacao:
+
+http://localhost:8000/docs
+
+Volume persistente:
+
+bebidas_postgres_data
+
+Observacao:
+
+O volume guarda os dados do Postgres. Reiniciar ou recriar containers nao apaga os dados, desde que o volume nao seja removido.
+
+
+16. COMO MOVER O CONTAINER PARA OUTRO COMPUTADOR
+
+Para mover o projeto para outro computador, existem duas abordagens.
+
+Abordagem simples, com internet:
+
+1) Copiar o projeto inteiro.
+2) Instalar Docker Desktop no outro computador.
+3) Copiar tambem o arquivo .env.docker.
+4) Na raiz do projeto, rodar:
+
+docker compose --env-file .env.docker up --build
+
+5) Fazer backup e restauracao do banco se precisar levar dados antigos.
+
+Backup do banco:
+
+docker compose --env-file .env.docker exec db pg_dump -U bebidas_user -d bebidas_scan > bebidas_backup.sql
+
+Restaurar no outro computador:
+
+Get-Content bebidas_backup.sql | docker compose --env-file .env.docker exec -T db psql -U bebidas_user -d bebidas_scan
+
+Abordagem por imagem Docker:
+
+1) Exportar imagem:
+
+docker save -o api-image.tar bebidasscan-api:latest
+
+2) Levar:
+
+- api-image.tar
+- docker-compose.yml
+- .env.docker
+- bebidas_backup.sql
+
+3) No outro computador:
+
+docker load -i api-image.tar
+
+4) Subir banco e restaurar backup.
+
+
+17. CLOUD, VPN E CLOUDFLARE
+
+Atualmente, se o backend roda no computador, o app depende desse computador ligado.
+
+Opcoes:
+
+1) Rede local
+
+O APK aponta para:
+
+http://IP_DO_COMPUTADOR:8000
+
+Funciona apenas se celular e computador estiverem na mesma rede, ou se houver roteamento adequado.
+
+2) Cloudflare Tunnel
+
+Permite expor a API local por uma URL HTTPS fixa sem abrir porta no roteador.
+
+Fluxo:
+
+APK -> https://api.seudominio.com -> Cloudflare Tunnel -> computador -> Docker -> FastAPI/Postgres
+
+Vantagens:
+
+- URL fixa;
+- HTTPS;
+- nao precisa IP fixo;
+- nao precisa abrir porta no roteador;
+- IP residencial nao fica exposto diretamente.
+
+Limites:
+
+- precisa de dominio para uso definitivo;
+- computador precisa ficar ligado;
+- Docker precisa estar rodando;
+- cloudflared precisa estar rodando.
+
+3) VPN tradicional
+
+Exemplos:
+
+- Tailscale;
+- WireGuard.
+
+Boa para uso privado, mas ruim para distribuir APK para qualquer pessoa, pois cada celular teria que entrar na VPN.
+
+4) VPS ou cloud
+
+Melhor solucao para producao 24/7.
+
+O mesmo Docker Compose pode rodar em uma VPS.
+
+Exemplos de provedores:
+
+- Hetzner;
+- DigitalOcean;
+- Hostinger VPS;
+- Contabo;
+- Render;
+- Railway;
+- Fly.io.
+
+
+18. FUNCIONAMENTO ATUAL VALIDADO
+
+Ja foi validado durante o desenvolvimento:
+
+- Backend local subiu.
+- Backend em Docker subiu.
+- Container da API ficou healthy.
+- Container do Postgres ficou healthy.
+- API respondeu GET / com status ok.
+- /docs abriu com status 200.
+- Login funcionou.
+- Cadastro funcionou.
+- API funcionou no celular.
+- Camera abriu no Galaxy S25 / Android 16.
+- Scanner passou a usar camera + leitura nativa Android.
+- Busca manual por codigo funcionou.
+- Flutter analyze passou sem issues.
+- Flutter test passou.
+- APK release foi gerado.
+
+
+19. COMANDOS UTEIS
+
+Subir backend sem Docker:
+
+cd "C:\Users\jcons\Documents\Bebidas Scan\backend"
+.\venv\Scripts\Activate.ps1
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+Subir backend com Docker:
+
+cd "C:\Users\jcons\Documents\Bebidas Scan"
+docker compose --env-file .env.docker up --build
+
+Subir Docker em segundo plano:
+
+docker compose --env-file .env.docker up -d --build
+
+Ver containers:
+
+docker compose --env-file .env.docker ps
+
+Parar containers sem apagar dados:
+
+docker compose --env-file .env.docker down
+
+Parar e apagar volume/banco:
+
+docker compose --env-file .env.docker down -v
+
+Testar API:
+
+Invoke-RestMethod http://localhost:8000/
+
+Abrir documentacao:
+
+http://localhost:8000/docs
+
+Gerar APK release para IP local:
+
+cd "C:\Users\jcons\Documents\Bebidas Scan\mobile\bebidas_scan_app"
+C:\Users\jcons\develop\flutter\bin\flutter.bat build apk --release --dart-define=API_BASE_URL=http://SEU_IP:8000
+
+Gerar APK release para dominio HTTPS:
+
+C:\Users\jcons\develop\flutter\bin\flutter.bat build apk --release --dart-define=API_BASE_URL=https://api.seudominio.com
+
+Rodar analise Flutter:
+
+C:\Users\jcons\develop\flutter\bin\flutter.bat analyze
+
+Rodar testes Flutter:
+
+C:\Users\jcons\develop\flutter\bin\flutter.bat test
+
+Compilar backend Python:
+
+cd "C:\Users\jcons\Documents\Bebidas Scan\backend"
+.\venv\Scripts\python.exe -m compileall app
+
+
+20. LIMITACOES ATUAIS
+
+Limites tecnicos e de produto no estado atual:
+
+- O backend ainda depende do computador ligado se nao estiver em VPS/cloud.
+- Ainda nao existe dominio configurado.
+- Cloudflare Tunnel definitivo exige dominio.
+- Ainda nao existe migracao com Alembic.
+- As tabelas sao criadas automaticamente no startup com Base.metadata.create_all.
+- Nao existe painel administrativo.
+- Nao existe tela completa no app para cadastrar bebida quando o codigo nao e encontrado.
+- O backend tem rota de precos, mas o app ainda nao tem uma tela completa para registrar/listar precos.
+- Nao existe backup automatico do Postgres.
+- APK ainda usa applicationId generico:
+  com.example.bebidas_scan_app
+
+- APK ainda nao tem identidade final de pacote para Play Store.
+- APK release usa assinatura release se key.properties existir; caso contrario, usa assinatura debug como fallback.
+- O app ainda permite HTTP local com usesCleartextTraffic=true.
+- A busca de bebidas depende da qualidade dos dados do Open Food Facts quando a bebida nao existe localmente.
+- O scanner atual usa botao "Ler codigo"; ainda nao faz leitura automatica continua.
+
+
+21. PROXIMOS PASSOS RECOMENDADOS
+
+Prioridade 1: URL fixa para o backend
+
+- Comprar um dominio.
+- Configurar Cloudflare.
+- Criar Cloudflare Tunnel ou subir em VPS.
+- Gerar APK apontando para URL HTTPS fixa.
+
+Prioridade 2: Backup e persistencia
+
+- Criar rotina de backup do Postgres.
+- Documentar restauracao.
+- Testar restore em outro computador.
+
+Prioridade 3: Produto
+
+- Criar tela de "bebida nao encontrada".
+- Permitir cadastrar bebida manualmente pelo app.
+- Criar historico de scans.
+- Criar tela de favoritos.
+- Criar tela para registrar e listar precos.
+- Melhorar mensagens de erro e estados vazios.
+
+Prioridade 4: Publicacao Android
+
+- Trocar applicationId para um pacote final, por exemplo:
+  br.com.seudominio.bebidasscan
+
+- Criar chave definitiva de assinatura.
+- Gerar APK/AAB release assinado.
+- Preparar icone final e nome final.
+- Preparar politica de privacidade.
+- Avaliar publicacao na Play Store.
+
+Prioridade 5: Infraestrutura de producao
+
+- Migrar Docker Compose para VPS ou plataforma cloud.
+- Ativar HTTPS.
+- Remover necessidade de HTTP local no APK final.
+- Configurar firewall.
+- Configurar backups.
+- Configurar monitoramento simples.
+
+
+22. RESUMO FINAL
+
+O Bebidas Scan ja e um MVP funcional.
+
+Ele possui:
+
+- app Android Flutter;
+- backend FastAPI;
+- autenticacao com JWT;
+- cadastro e login;
+- modo convidado;
+- scanner com camera;
+- leitura nativa Android com ML Kit;
+- busca por codigo de barras;
+- fallback para Open Food Facts;
+- busca por nome;
+- detalhes de bebida;
+- avaliacao;
+- favorito;
+- backend com Docker;
+- banco PostgreSQL em container;
+- volume persistente;
+- build APK configuravel por API_BASE_URL.
+
+O principal proximo salto do projeto e transformar o backend local em uma API acessivel por URL fixa, preferencialmente HTTPS, usando Cloudflare Tunnel com dominio ou uma VPS/cloud. Depois disso, o app deixa de depender da mesma rede Wi-Fi e passa a ficar muito mais proximo de um produto real.

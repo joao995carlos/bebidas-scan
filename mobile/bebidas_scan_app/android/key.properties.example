@@ -1,0 +1,5 @@
+storePassword=SUA_SENHA_DA_KEYSTORE
+keyPassword=SUA_SENHA_DA_CHAVE
+keyAlias=bebidas_scan
+storeFile=../app/bebidas-scan-release.jks
+
