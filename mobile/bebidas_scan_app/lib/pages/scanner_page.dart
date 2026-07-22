@@ -501,6 +501,9 @@ class _ScannerPageState extends State<ScannerPage> with WidgetsBindingObserver {
                 controller: cameraController,
                 inicializando: cameraInicializando,
                 erro: cameraErro,
+                status: statusLeitura,
+                automatico: deteccaoAutomatica,
+                lendo: lendo,
               ),
             ),
           ),
@@ -556,11 +559,17 @@ class _CameraArea extends StatelessWidget {
     required this.controller,
     required this.inicializando,
     required this.erro,
+    required this.status,
+    required this.automatico,
+    required this.lendo,
   });
 
   final CameraController? controller;
   final bool inicializando;
   final String? erro;
+  final String status;
+  final bool automatico;
+  final bool lendo;
 
   @override
   Widget build(BuildContext context) {
@@ -591,10 +600,122 @@ class _CameraArea extends StatelessWidget {
 
     return ColoredBox(
       color: Colors.black,
-      child: Center(
-        child: AspectRatio(
-          aspectRatio: 1 / camera.value.aspectRatio,
-          child: CameraPreview(camera),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Center(
+            child: AspectRatio(
+              aspectRatio: 1 / camera.value.aspectRatio,
+              child: CameraPreview(camera),
+            ),
+          ),
+          const _ScannerFrame(),
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: 16,
+            child: _ScannerStatusBar(
+              status: status,
+              automatico: automatico,
+              lendo: lendo,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ScannerFrame extends StatelessWidget {
+  const _ScannerFrame();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        width: 280,
+        height: 170,
+        decoration: BoxDecoration(
+          border: Border.all(color: const Color(0xfff3b35f), width: 3),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Stack(
+          children: [
+            Center(
+              child: Container(
+                height: 2,
+                margin: const EdgeInsets.symmetric(horizontal: 20),
+                color: const Color(0xfff3b35f),
+              ),
+            ),
+            Positioned(
+              left: 10,
+              right: 10,
+              bottom: 12,
+              child: Text(
+                'Alinhe o código dentro da moldura',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black.withValues(alpha: .75),
+                      blurRadius: 8,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ScannerStatusBar extends StatelessWidget {
+  const _ScannerStatusBar({
+    required this.status,
+    required this.automatico,
+    required this.lendo,
+  });
+
+  final String status;
+  final bool automatico;
+  final bool lendo;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xff241611).withValues(alpha: .88),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xfff3b35f)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Icon(
+              lendo
+                  ? Icons.center_focus_strong
+                  : (automatico ? Icons.sensors : Icons.radio_button_checked),
+              color: const Color(0xfff3b35f),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                status,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

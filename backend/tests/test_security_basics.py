@@ -324,15 +324,16 @@ def test_qa_web_fluxo_botao_por_botao_cadastro_bebida_favorito_avaliacao_privaci
     scanner_csrf = csrf_from(scanner.text)
     for trecho in ["Abrir câmera", "Parar câmera", 'name="codigo"', "Buscar código"]:
         assert trecho in scanner.text
+    codigo_teste = f"789{uuid.uuid4().int % 10_000_000_000:010d}"
     busca_codigo = local.post(
         "/web/buscar-codigo",
-        data={"codigo": "7891234567890", "csrf_token": scanner_csrf},
+        data={"codigo": codigo_teste, "csrf_token": scanner_csrf},
         follow_redirects=False,
     )
     assert busca_codigo.status_code == 303
-    assert "/web/bebidas/nova?codigo_barras=7891234567890" in busca_codigo.headers["location"]
+    assert f"/web/bebidas/nova?codigo_barras={codigo_teste}" in busca_codigo.headers["location"]
 
-    nova = local.get("/web/bebidas/nova?codigo_barras=7891234567890")
+    nova = local.get(f"/web/bebidas/nova?codigo_barras={codigo_teste}")
     assert nova.status_code == 200
     nova_csrf = csrf_from(nova.text)
     for campo in [
@@ -365,7 +366,7 @@ def test_qa_web_fluxo_botao_por_botao_cadastro_bebida_favorito_avaliacao_privaci
             "nome": "Cachaça QA",
             "marca": "Marca QA",
             "tipo": "cachaca",
-            "codigo_barras": "7891234567890",
+            "codigo_barras": codigo_teste,
             "teor_alcoolico": "40",
             "ingredientes": "Cana-de-açúcar",
             "imagem_url": "",

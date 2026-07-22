@@ -206,4 +206,8 @@ class ApiService {
   Future<Response> favoritar(int idBebida) {
     return dio.post('/favoritos/$idBebida');
   }
+
+  Future<Response> listarFavoritos() {
+    return dio.get('/favoritos');
+  }
 }

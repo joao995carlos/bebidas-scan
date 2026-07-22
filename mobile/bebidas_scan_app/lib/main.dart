@@ -72,10 +72,24 @@ class BebidasScanApp extends StatelessWidget {
           filled: true,
           fillColor: Color(0xffffffff),
         ),
+        navigationBarTheme: NavigationBarThemeData(
+          backgroundColor: const Color(0xfffffbf5),
+          indicatorColor: const Color(0xfff3b35f),
+          labelTextStyle: WidgetStateProperty.all(
+            const TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ),
+        chipTheme: ChipThemeData(
+          backgroundColor: const Color(0xfffffbf5),
+          selectedColor: const Color(0xfff3b35f),
+          side: const BorderSide(color: Color(0xffead8c6)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
             backgroundColor: const Color(0xff1f7a5c),
             foregroundColor: Colors.white,
+            minimumSize: const Size(48, 48),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
@@ -85,10 +99,16 @@ class BebidasScanApp extends StatelessWidget {
           style: OutlinedButton.styleFrom(
             foregroundColor: const Color(0xff7a2434),
             side: const BorderSide(color: Color(0xffb45f2a)),
+            minimumSize: const Size(48, 48),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
           ),
+        ),
+        snackBarTheme: const SnackBarThemeData(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Color(0xff241611),
+          contentTextStyle: TextStyle(color: Colors.white),
         ),
       ),
       initialRoute: '/',
