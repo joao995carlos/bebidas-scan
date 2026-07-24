@@ -50,7 +50,7 @@ O backend usa o Resend para enviar links de recuperacao de senha. Configure o do
 ```env
 RESEND_API_KEY=re_sua_chave
 EMAIL_FROM=Bebidas Scan <nao-responda@bebidasscan.com.br>
-PASSWORD_RESET_BASE_URL=https://api.bebidasscan.com.br/web/resetar-senha
+PASSWORD_RESET_BASE_URL=https://api.bebidasscan.com.br/resetar-senha
 APP_WEB_URL=https://bebidasscan.com.br
 ```
 
@@ -62,6 +62,8 @@ E-mails transacionais enviados:
 - link de recuperacao de senha;
 - aviso de senha alterada;
 - aviso de senha redefinida.
+
+A página pública de redefinição fica em `/resetar-senha`, separada do app web em `/web`.
 
 ## Rotas principais
 

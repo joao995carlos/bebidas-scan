@@ -301,6 +301,45 @@ def test_confirmar_reset_senha_troca_senha_e_bloqueia_reuso():
     assert login_novo.status_code == 200
 
 
+def test_pagina_publica_reset_senha_separada_do_web_app():
+    email = f"reset-page-{uuid.uuid4().hex}@example.com"
+    usuario = registrar_usuario(email, "Senha@123")
+    token = criar_refresh_token()
+
+    with SessionLocal() as db:
+        db.add(
+            PasswordResetToken(
+                id_usuario=usuario["usuario"]["id_usuario"],
+                token_hash=hash_token(token),
+                expiracao=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=30),
+            )
+        )
+        db.commit()
+
+    pagina = client.get(f"/resetar-senha?token={token}")
+    assert pagina.status_code == 200
+    assert 'action="/resetar-senha"' in pagina.text
+    assert 'action="/web/resetar-senha"' not in pagina.text
+    assert 'href="/web/login"' not in pagina.text
+
+    legado = client.get(f"/web/resetar-senha?token={token}", follow_redirects=False)
+    assert legado.status_code == 308
+    assert legado.headers["location"] == f"/resetar-senha?token={token}"
+
+    redefinida = client.post(
+        "/resetar-senha",
+        data={"token": token, "nova_senha": "Reset@123"},
+    )
+    assert redefinida.status_code == 200
+    assert "Senha redefinida com sucesso" in redefinida.text
+
+    login_novo = client.post(
+        "/auth/login",
+        json={"identificador": email, "senha": "Reset@123"},
+    )
+    assert login_novo.status_code == 200
+
+
 def test_web_cadastro_rejeita_email_invalido_e_senha_fraca():
     resposta_email = client.post(
         "/web/registrar",

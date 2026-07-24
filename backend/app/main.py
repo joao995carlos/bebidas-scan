@@ -27,6 +27,7 @@ from .controllers.perfil_controller import router as perfil_router
 from .controllers.precos_controller import router as precos_router
 from .controllers.privacidade_controller import router as privacidade_router
 from .controllers.web_controller import router as web_router
+from .routes_password_reset import router as password_reset_router
 
 Base.metadata.create_all(bind=engine)
 aplicar_migracoes_leves(engine)
@@ -128,6 +129,7 @@ app.include_router(favoritos_router)
 app.include_router(precos_router)
 app.include_router(privacidade_router)
 app.include_router(admin_router)
+app.include_router(password_reset_router)
 app.include_router(web_router)
 
 

@@ -40,7 +40,7 @@ TRUST_PROXY_HEADERS=true
 FORWARDED_ALLOW_IPS=*
 RESEND_API_KEY=re_sua_chave
 EMAIL_FROM=Bebidas Scan <nao-responda@bebidasscan.com.br>
-PASSWORD_RESET_BASE_URL=https://api.bebidasscan.com.br/web/resetar-senha
+PASSWORD_RESET_BASE_URL=https://api.bebidasscan.com.br/resetar-senha
 APP_WEB_URL=https://bebidasscan.com.br
 ```
 

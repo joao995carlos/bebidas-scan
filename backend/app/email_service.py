@@ -1,4 +1,4 @@
-import os
+﻿import os
 from html import escape
 from typing import Literal
 
@@ -32,7 +32,7 @@ def _email_from() -> str:
 def _password_reset_base_url() -> str:
     return os.getenv(
         "PASSWORD_RESET_BASE_URL",
-        "https://api.bebidasscan.com.br/web/resetar-senha",
+        "https://api.bebidasscan.com.br/resetar-senha",
     ).strip()
 
 
@@ -43,7 +43,7 @@ def _app_web_url() -> str:
 async def _enviar_resend(*, email: str, subject: str, html: str) -> None:
     api_key = _resend_api_key()
     if not api_key:
-        raise EmailNaoConfigurado("RESEND_API_KEY não configurada")
+        raise EmailNaoConfigurado("RESEND_API_KEY nÃ£o configurada")
 
     async with httpx.AsyncClient(timeout=10) as client:
         response = await client.post(
@@ -69,7 +69,7 @@ def _html_base(*, titulo: str, conteudo: str) -> str:
       {conteudo}
       <hr style="border: none; border-top: 1px solid #eadfd5; margin: 24px 0;">
       <p style="font-size: 12px; color: #6f625b;">
-        Este é um e-mail transacional do Bebidas Scan.
+        Este Ã© um e-mail transacional do Bebidas Scan.
       </p>
     </div>
     """
@@ -87,11 +87,11 @@ def _botao(link: str, texto: str) -> str:
 
 
 async def enviar_email_boas_vindas(*, email: str, nome: str) -> None:
-    nome_seguro = escape(nome.strip() or "usuário")
+    nome_seguro = escape(nome.strip() or "usuÃ¡rio")
     conteudo = f"""
-    <p>Olá, {nome_seguro}.</p>
+    <p>OlÃ¡, {nome_seguro}.</p>
     <p>Sua conta no Bebidas Scan foi criada com sucesso.</p>
-    <p>Agora você pode escanear bebidas, salvar favoritos, avaliar produtos e manter seu histórico com mais segurança.</p>
+    <p>Agora vocÃª pode escanear bebidas, salvar favoritos, avaliar produtos e manter seu histÃ³rico com mais seguranÃ§a.</p>
     {_botao(_app_web_url(), "Abrir Bebidas Scan")}
     """
     await _enviar_resend(
@@ -104,23 +104,23 @@ async def enviar_email_boas_vindas(*, email: str, nome: str) -> None:
 async def enviar_email_reset_senha(*, email: str, token: str) -> None:
     link = f"{_password_reset_base_url()}?token={token}"
     conteudo = f"""
-    <p>Recebemos uma solicitação para redefinir sua senha no Bebidas Scan.</p>
+    <p>Recebemos uma solicitaÃ§Ã£o para redefinir sua senha no Bebidas Scan.</p>
     {_botao(link, "Redefinir minha senha")}
-    <p>Esse link expira em 30 minutos. Se você não pediu isso, ignore este e-mail.</p>
+    <p>Esse link expira em 30 minutos. Se vocÃª nÃ£o pediu isso, ignore este e-mail.</p>
     """
     await _enviar_resend(
         email=email,
-        subject="Redefinição de senha - Bebidas Scan",
+        subject="RedefiniÃ§Ã£o de senha - Bebidas Scan",
         html=_html_base(titulo="Redefinir senha", conteudo=conteudo),
     )
 
 
 async def enviar_email_senha_alterada(*, email: str, nome: str) -> None:
-    nome_seguro = escape(nome.strip() or "usuário")
+    nome_seguro = escape(nome.strip() or "usuÃ¡rio")
     conteudo = f"""
-    <p>Olá, {nome_seguro}.</p>
+    <p>OlÃ¡, {nome_seguro}.</p>
     <p>Sua senha do Bebidas Scan foi alterada com sucesso.</p>
-    <p>Se você não fez essa alteração, solicite uma recuperação de senha imediatamente.</p>
+    <p>Se vocÃª nÃ£o fez essa alteraÃ§Ã£o, solicite uma recuperaÃ§Ã£o de senha imediatamente.</p>
     """
     await _enviar_resend(
         email=email,
@@ -130,11 +130,11 @@ async def enviar_email_senha_alterada(*, email: str, nome: str) -> None:
 
 
 async def enviar_email_senha_redefinida(*, email: str, nome: str) -> None:
-    nome_seguro = escape(nome.strip() or "usuário")
+    nome_seguro = escape(nome.strip() or "usuÃ¡rio")
     conteudo = f"""
-    <p>Olá, {nome_seguro}.</p>
+    <p>OlÃ¡, {nome_seguro}.</p>
     <p>Sua senha do Bebidas Scan foi redefinida com sucesso.</p>
-    <p>Se você não fez essa redefinição, solicite uma nova recuperação de senha e revise a segurança da sua conta.</p>
+    <p>Se vocÃª nÃ£o fez essa redefiniÃ§Ã£o, solicite uma nova recuperaÃ§Ã£o de senha e revise a seguranÃ§a da sua conta.</p>
     """
     await _enviar_resend(
         email=email,
@@ -165,7 +165,7 @@ async def enviar_email_transacional_seguro(
             app_logger,
             30,
             f"email_{tipo}_nao_configurado",
-            "E-mail transacional não enviado porque o Resend não está configurado",
+            "E-mail transacional nÃ£o enviado porque o Resend nÃ£o estÃ¡ configurado",
             action=f"email.{tipo}",
             userId=user_id,
         )
