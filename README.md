@@ -41,6 +41,7 @@ FORWARDED_ALLOW_IPS=*
 RESEND_API_KEY=re_sua_chave
 EMAIL_FROM=Bebidas Scan <nao-responda@bebidasscan.com.br>
 PASSWORD_RESET_BASE_URL=https://api.bebidasscan.com.br/web/resetar-senha
+APP_WEB_URL=https://bebidasscan.com.br
 ```
 
 Use `FORWARDED_ALLOW_IPS=*` apenas quando o acesso público passar exclusivamente por um proxy confiável, como Cloudflare Tunnel. Se a porta da API ficar aberta diretamente na internet, restrinja esse valor aos IPs do proxy.

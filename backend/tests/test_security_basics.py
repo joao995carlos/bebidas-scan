@@ -3,6 +3,7 @@ import tempfile
 import uuid
 import logging
 import re
+from functools import partial
 from datetime import datetime, timedelta, timezone
 
 os.environ["JWT_SECRET_KEY"] = "x" * 64
@@ -20,6 +21,7 @@ fd, db_path = tempfile.mkstemp(suffix=".db")
 os.close(fd)
 os.environ["DATABASE_URL"] = "sqlite:///" + db_path.replace("\\", "/")
 
+import anyio  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
 from app.database import Base, SessionLocal, engine  # noqa: E402
@@ -352,6 +354,22 @@ def test_logger_json_mascara_dados_sensiveis():
     assert "senha-real" not in saida
     assert "usuario@example.com" not in saida
     assert "***MASKED***" in saida
+
+
+def test_email_transacional_nao_critico_sem_resend_nao_quebra(monkeypatch):
+    from app.email_service import enviar_email_transacional_seguro
+
+    monkeypatch.delenv("RESEND_API_KEY", raising=False)
+
+    anyio.run(
+        partial(
+            enviar_email_transacional_seguro,
+            "boas_vindas",
+            email="qa@example.com",
+            nome="Usuario QA",
+            user_id=1,
+        )
+    )
 
 
 def test_qa_web_fluxo_botao_por_botao_cadastro_bebida_favorito_avaliacao_privacidade_logout():

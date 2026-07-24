@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Request
 from sqlalchemy.orm import Session
 
 from .database import get_db
 from .dependencies import usuario_logado
+from .email_service import enviar_email_transacional_seguro
 from .schemas import (
     AccessTokenResposta,
     AlterarSenhaRequest,
@@ -27,8 +28,21 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/registrar", response_model=TokenResposta)
-def registrar(dados: UsuarioCreate, request: Request, db: Session = Depends(get_db)):
-    return registrar_usuario(dados, request, db)
+def registrar(
+    dados: UsuarioCreate,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    resposta = registrar_usuario(dados, request, db)
+    background_tasks.add_task(
+        enviar_email_transacional_seguro,
+        "boas_vindas",
+        email=resposta.usuario.email,
+        nome=resposta.usuario.nome,
+        user_id=resposta.usuario.id_usuario,
+    )
+    return resposta
 
 
 @router.post("/login", response_model=TokenResposta)
@@ -49,10 +63,19 @@ def logout(dados: RefreshRequest, db: Session = Depends(get_db)):
 @router.post("/alterar-senha")
 def alterar_senha(
     dados: AlterarSenhaRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     usuario=Depends(usuario_logado),
 ):
-    return alterar_senha_usuario(dados, db, usuario)
+    resposta = alterar_senha_usuario(dados, db, usuario)
+    background_tasks.add_task(
+        enviar_email_transacional_seguro,
+        "senha_alterada",
+        email=usuario.email,
+        nome=usuario.nome,
+        user_id=usuario.id_usuario,
+    )
+    return resposta
 
 
 @router.post("/solicitar-reset-senha")
@@ -65,5 +88,19 @@ async def solicitar_reset(
 
 
 @router.post("/confirmar-reset-senha")
-def confirmar_reset(dados: ConfirmarResetSenhaRequest, db: Session = Depends(get_db)):
-    return confirmar_reset_senha(dados, db)
+def confirmar_reset(
+    dados: ConfirmarResetSenhaRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    return confirmar_reset_senha(
+        dados,
+        db,
+        lambda usuario: background_tasks.add_task(
+            enviar_email_transacional_seguro,
+            "senha_redefinida",
+            email=usuario.email,
+            nome=usuario.nome,
+            user_id=usuario.id_usuario,
+        ),
+    )

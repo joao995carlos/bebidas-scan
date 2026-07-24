@@ -5,13 +5,14 @@ import os
 from html import escape
 from urllib.parse import quote
 
-from fastapi import APIRouter, Cookie, Depends, Form, HTTPException, Query, Request, status
+from fastapi import APIRouter, BackgroundTasks, Cookie, Depends, Form, HTTPException, Query, Request, status
 from pydantic import ValidationError
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .database import get_db
+from .email_service import enviar_email_transacional_seguro
 from .lgpd import (
     LGPD_DOCUMENT_VERSION,
     lgpd_pendente,
@@ -245,6 +246,7 @@ def reset_senha_form(token: str = Query("", min_length=1, max_length=300)):
 
 @router.post("/resetar-senha", response_class=HTMLResponse)
 def reset_senha_post(
+    background_tasks: BackgroundTasks,
     token: str = Form(...),
     nova_senha: str = Form(...),
     db: Session = Depends(get_db),
@@ -253,6 +255,13 @@ def reset_senha_post(
         confirmar_reset_senha(
             ConfirmarResetSenhaRequest(token=token, nova_senha=nova_senha),
             db,
+            lambda usuario: background_tasks.add_task(
+                enviar_email_transacional_seguro,
+                "senha_redefinida",
+                email=usuario.email,
+                nome=usuario.nome,
+                user_id=usuario.id_usuario,
+            ),
         )
     except HTTPException as erro:
         return _layout("Redefinir senha", _reset_senha_form(token, erro=str(erro.detail)))
@@ -302,6 +311,7 @@ def _registrar_form_html(erro: str = "") -> str:
 @router.post("/registrar")
 def registrar_post(
     request: Request,
+    background_tasks: BackgroundTasks,
     nome: str = Form(...),
     nome_usuario: str = Form(...),
     email: str = Form(...),
@@ -328,6 +338,13 @@ def registrar_post(
     except ValueError as erro:
         return _layout("Criar conta", render_registrar_form(str(erro)))
 
+    background_tasks.add_task(
+        enviar_email_transacional_seguro,
+        "boas_vindas",
+        email=usuario.email,
+        nome=usuario.nome,
+        user_id=usuario.id_usuario,
+    )
     response = RedirectResponse("/web/", status_code=303)
     _set_auth_cookies(response, access_token, refresh_token)
     return response

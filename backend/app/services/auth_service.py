@@ -1,7 +1,9 @@
 from datetime import datetime, timezone
 from datetime import timedelta
+from typing import Callable
 
 from fastapi import HTTPException, Request
+import httpx
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -249,6 +251,17 @@ async def solicitar_reset_senha(
             action="auth.password_reset_request",
         )
         raise HTTPException(status_code=503, detail="Envio de e-mail ainda não configurado")
+    except httpx.HTTPError as erro:
+        log_event(
+            app_logger,
+            40,
+            "email_reset_senha_falhou",
+            "Falha ao enviar e-mail de reset de senha",
+            action="auth.password_reset_request",
+            userId=usuario.id_usuario,
+            errorType=type(erro).__name__,
+        )
+        raise HTTPException(status_code=502, detail="Falha temporária ao enviar e-mail")
 
     log_event(
         audit_logger,
@@ -261,7 +274,11 @@ async def solicitar_reset_senha(
     return resposta
 
 
-def confirmar_reset_senha(dados: ConfirmarResetSenhaRequest, db: Session) -> dict[str, str]:
+def confirmar_reset_senha(
+    dados: ConfirmarResetSenhaRequest,
+    db: Session,
+    ao_confirmar: Callable[[Usuario], None] | None = None,
+) -> dict[str, str]:
     token_hash = hash_token(dados.token)
     registro = (
         db.query(PasswordResetToken)
@@ -286,6 +303,8 @@ def confirmar_reset_senha(dados: ConfirmarResetSenhaRequest, db: Session) -> dic
     registro.usado_em = datetime.now(timezone.utc).replace(tzinfo=None)
     revogar_tokens_usuario(db, usuario.id_usuario)
     db.commit()
+    if ao_confirmar:
+        ao_confirmar(usuario)
     log_event(
         audit_logger,
         20,
