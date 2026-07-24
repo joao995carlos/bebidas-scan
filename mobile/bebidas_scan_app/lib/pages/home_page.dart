@@ -230,13 +230,28 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: abaAtual,
-        onDestinationSelected: (index) => setState(() => abaAtual = index),
+        selectedIndex: switch (abaAtual) {
+          0 => 0,
+          1 => 2,
+          _ => 3,
+        },
+        onDestinationSelected: (index) {
+          if (index == 1) {
+            Navigator.pushNamed(context, '/scanner');
+            return;
+          }
+          setState(() => abaAtual = index == 0 ? 0 : (index == 2 ? 1 : 2));
+        },
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home),
             label: 'Início',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.qr_code_scanner),
+            selectedIcon: Icon(Icons.qr_code_scanner),
+            label: 'Scanner',
           ),
           NavigationDestination(
             icon: Icon(Icons.favorite_border),
@@ -291,125 +306,98 @@ class _HomeContent extends StatelessWidget {
 
     return ListView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       children: [
-        Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: colors.primary,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Encontre a bebida certa',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'Escaneie, pesquise ou cadastre informações em poucos toques.',
-                style: TextStyle(color: Color(0xfffff4e8), height: 1.35),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xfff3b35f),
-                    foregroundColor: const Color(0xff241611),
-                    minimumSize: const Size.fromHeight(52),
-                  ),
-                  onPressed: () => Navigator.pushNamed(context, '/scanner'),
-                  icon: const Icon(Icons.qr_code_scanner),
-                  label: const Text('Escanear bebida'),
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (convidado) ...[
-          const SizedBox(height: 12),
-          Material(
-            color: const Color(0xfffffbf5),
-            shape: RoundedRectangleBorder(
-              side: const BorderSide(color: Color(0xffead8c6)),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: ListTile(
-              leading:
-                  Icon(Icons.account_circle_outlined, color: colors.tertiary),
-              title: const Text('Conta opcional'),
-              subtitle: const Text(
-                'Entre para avaliar, favoritar e gerenciar sua privacidade.',
-              ),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.pushReplacementNamed(context, '/login'),
-            ),
-          ),
-        ],
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _QuickAction(
-                icon: Icons.add,
-                label: 'Cadastrar',
-                color: const Color(0xffb45f2a),
-                onTap: () => Navigator.pushNamed(context, '/bebida-form'),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _QuickAction(
-                icon: Icons.favorite_border,
-                label: 'Favoritos',
-                color: const Color(0xff7a2434),
-                onTap: abrirFavoritos,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _QuickAction(
-                icon: Icons.person_outline,
-                label: 'Perfil',
-                color: const Color(0xff273f73),
-                onTap: () => Navigator.pushNamed(context, '/perfil'),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 24),
         const Text(
-          'Pesquisar',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+          'Olá',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
         ),
-        const SizedBox(height: 10),
-        TextField(
-          controller: pesquisaController,
-          decoration: InputDecoration(
-            labelText: 'Nome, marca ou tipo',
-            hintText: 'Ex.: Coca-Cola, água, suco',
-            prefixIcon: const Icon(Icons.search),
-            suffixIcon: IconButton(
-              tooltip: 'Pesquisar',
-              onPressed: pesquisando ? null : pesquisar,
-              icon: const Icon(Icons.arrow_forward),
-            ),
+        Text(
+          'O que você quer encontrar hoje?',
+          style: TextStyle(
+            color: colors.onSurfaceVariant,
+            fontWeight: FontWeight.w600,
           ),
-          textInputAction: TextInputAction.search,
-          onSubmitted: (_) => pesquisar(),
+        ),
+        const SizedBox(height: 14),
+        _SearchBox(
+          controller: pesquisaController,
+          pesquisando: pesquisando,
+          pesquisar: pesquisar,
         ),
         _SearchSuggestions(
           buscando: buscandoSugestoes,
           sugestoes: sugestoes,
           onTap: usarSugestao,
         ),
+        const SizedBox(height: 16),
+        _PrimaryScanPanel(
+          onTap: () => Navigator.pushNamed(context, '/scanner'),
+        ),
         const SizedBox(height: 12),
+        OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size.fromHeight(56),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(999),
+            ),
+            side: const BorderSide(color: Color(0xff241611), width: 2),
+            foregroundColor: const Color(0xff241611),
+          ),
+          onPressed: () => Navigator.pushNamed(context, '/bebida-form'),
+          icon: const Icon(Icons.add),
+          label: const Text('Cadastrar bebida'),
+        ),
+        if (convidado) ...[
+          const SizedBox(height: 14),
+          _CompactInfoTile(
+            icon: Icons.account_circle_outlined,
+            title: 'Entrar na conta',
+            text: 'Salve favoritos, avaliações e seus dados de privacidade.',
+            onTap: () => Navigator.pushReplacementNamed(context, '/login'),
+          ),
+        ],
+        const SizedBox(height: 22),
+        const Text(
+          'Acessos rápidos',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 10),
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+          childAspectRatio: 2.15,
+          children: [
+            _QuickAction(
+              icon: Icons.favorite_border,
+              label: 'Favoritos',
+              color: const Color(0xff7a2434),
+              onTap: abrirFavoritos,
+            ),
+            _QuickAction(
+              icon: Icons.liquor_outlined,
+              label: 'Cachaças',
+              color: const Color(0xffb45f2a),
+              onTap: () => pesquisarTermo('cachaça'),
+            ),
+            _QuickAction(
+              icon: Icons.document_scanner_outlined,
+              label: 'Rótulo',
+              color: const Color(0xff1f7a5c),
+              onTap: () => Navigator.pushNamed(context, '/bottle-ocr'),
+            ),
+            _QuickAction(
+              icon: Icons.person_outline,
+              label: 'Perfil',
+              color: const Color(0xff273f73),
+              onTap: () => Navigator.pushNamed(context, '/perfil'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 18),
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -455,6 +443,7 @@ class _HomeContent extends StatelessWidget {
             onCadastrar: () => Navigator.pushNamed(context, '/bebida-form'),
           ),
         if (!pesquisando && resultados.isNotEmpty) ...[
+          const SizedBox(height: 8),
           const Text(
             'Resultados',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
@@ -511,6 +500,133 @@ class _QuickAction extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _SearchBox extends StatelessWidget {
+  const _SearchBox({
+    required this.controller,
+    required this.pesquisando,
+    required this.pesquisar,
+  });
+
+  final TextEditingController controller;
+  final bool pesquisando;
+  final Future<void> Function() pesquisar;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      decoration: InputDecoration(
+        hintText: 'Buscar bebida',
+        prefixIcon: const Icon(Icons.search),
+        suffixIcon: IconButton(
+          tooltip: 'Pesquisar',
+          onPressed: pesquisando ? null : pesquisar,
+          icon: pesquisando
+              ? const SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.arrow_forward),
+        ),
+      ),
+      textInputAction: TextInputAction.search,
+      onSubmitted: (_) => pesquisar(),
+    );
+  }
+}
+
+class _PrimaryScanPanel extends StatelessWidget {
+  const _PrimaryScanPanel({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Escanear bebida',
+      child: Material(
+        color: const Color(0xff0f4dbd),
+        borderRadius: BorderRadius.circular(26),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(26),
+          onTap: onTap,
+          child: SizedBox(
+            height: 340,
+            child: Padding(
+              padding: const EdgeInsets.all(28),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Align(
+                    alignment: Alignment.topRight,
+                    child: Icon(
+                      Icons.qr_code_scanner,
+                      color: Colors.white,
+                      size: 44,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    'Escaneie\numa bebida',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 42,
+                      height: 1.08,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Use o código de barras para encontrar ou cadastrar rápido.',
+                    style: TextStyle(
+                      color: Color(0xffe8f0ff),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CompactInfoTile extends StatelessWidget {
+  const _CompactInfoTile({
+    required this.icon,
+    required this.title,
+    required this.text,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String text;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xfffffbf5),
+      shape: RoundedRectangleBorder(
+        side: const BorderSide(color: Color(0xffead8c6)),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ListTile(
+        leading: Icon(icon, color: Theme.of(context).colorScheme.tertiary),
+        title: Text(title),
+        subtitle: Text(text),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: onTap,
       ),
     );
   }
