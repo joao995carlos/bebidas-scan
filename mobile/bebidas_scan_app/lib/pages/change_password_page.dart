@@ -18,6 +18,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   final novaController = TextEditingController();
   final confirmarController = TextEditingController();
   bool salvando = false;
+  bool senhaAlterada = false;
   String? erro;
 
   @override
@@ -58,10 +59,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
       );
       await tokenService.limparTokens();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Senha alterada. Entre novamente.')),
-      );
-      Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false);
+      setState(() => senhaAlterada = true);
     } on DioException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -76,6 +74,48 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (senhaAlterada) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Senha alterada')),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Icon(
+                  Icons.check_circle_outline,
+                  size: 64,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Senha alterada com sucesso',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Por segurança, entre novamente usando sua nova senha.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const Spacer(),
+                FilledButton.icon(
+                  onPressed: () => Navigator.pushNamedAndRemoveUntil(
+                      context, '/login', (_) => false),
+                  icon: const Icon(Icons.login),
+                  label: const Text('Voltar para o login'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text('Alterar senha')),
       body: SafeArea(
