@@ -42,6 +42,10 @@ services:
       TRUST_PROXY_HEADERS: ${TRUST_PROXY_HEADERS:-false}
       MAX_REQUEST_BODY_BYTES: ${MAX_REQUEST_BODY_BYTES:-1048576}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-Bebidas Scan <nao-responda@bebidasscan.com.br>}
+      PASSWORD_RESET_BASE_URL: ${PASSWORD_RESET_BASE_URL:-https://api.bebidasscan.com.br/web/resetar-senha}
+      APP_WEB_URL: ${APP_WEB_URL:-https://bebidasscan.com.br}
     ports:
       - "${API_PORT:-8000}:8000"
     command:
