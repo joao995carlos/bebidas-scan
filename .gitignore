@@ -24,6 +24,8 @@ build/
 **/build/
 .gradle/
 **/.gradle/
+target/
+**/target/
 .flutter-plugins
 .flutter-plugins-dependencies
 mobile/bebidas_scan_app/android/key.properties

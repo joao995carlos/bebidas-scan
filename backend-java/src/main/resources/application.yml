@@ -1,0 +1,47 @@
+spring:
+  application:
+    name: bebidas-scan-api
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/bebidas_scan}
+    username: ${POSTGRES_USER:bebidas_user}
+    password: ${POSTGRES_PASSWORD:bebidas_dev_password}
+  flyway:
+    enabled: ${FLYWAY_ENABLED:false}
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO:validate}
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+
+server:
+  port: ${PORT:8080}
+  forward-headers-strategy: framework
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+bebidas-scan:
+  jwt-secret-key: ${JWT_SECRET_KEY:}
+  jwt-algorithm: ${JWT_ALGORITHM:HS256}
+  access-token-expire-minutes: ${ACCESS_TOKEN_EXPIRE_MINUTES:15}
+  refresh-token-expire-days: ${REFRESH_TOKEN_EXPIRE_DAYS:7}
+  max-request-body-bytes: ${MAX_REQUEST_BODY_BYTES:1048576}
+  trust-proxy-headers: ${TRUST_PROXY_HEADERS:false}
+  auth-rate-limit-max-attempts: ${AUTH_RATE_LIMIT_MAX_ATTEMPTS:10}
+  auth-rate-limit-window-seconds: ${AUTH_RATE_LIMIT_WINDOW_SECONDS:60}
+  auth-rate-limit-identity-max-attempts: ${AUTH_RATE_LIMIT_IDENTITY_MAX_ATTEMPTS:5}
+  auth-rate-limit-identity-window-seconds: ${AUTH_RATE_LIMIT_IDENTITY_WINDOW_SECONDS:300}
+  auth-lockout-seconds: ${AUTH_LOCKOUT_SECONDS:900}
+  open-food-facts-user-agent: ${OPEN_FOOD_FACTS_USER_AGENT:BebidasScan/0.1}
+  resend-api-key: ${RESEND_API_KEY:}
+  email-from: ${EMAIL_FROM:Bebidas Scan <nao-responda@bebidasscan.com.br>}
+  password-reset-base-url: ${PASSWORD_RESET_BASE_URL:https://api.bebidasscan.com.br/resetar-senha}
+  app-web-url: ${APP_WEB_URL:https://bebidasscan.com.br}
+  cors-origins: ${CORS_ORIGINS:}

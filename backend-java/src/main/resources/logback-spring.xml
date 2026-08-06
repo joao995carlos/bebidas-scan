@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <springProperty scope="context" name="APP_NAME" source="spring.application.name" defaultValue="bebidas-scan-api"/>
+  <springProperty scope="context" name="LOG_LEVEL" source="logging.level.root" defaultValue="INFO"/>
+
+  <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+      <providers>
+        <timestamp>
+          <fieldName>timestamp</fieldName>
+          <timeZone>UTC</timeZone>
+        </timestamp>
+        <logLevel>
+          <fieldName>level</fieldName>
+        </logLevel>
+        <loggerName>
+          <fieldName>logger</fieldName>
+        </loggerName>
+        <message>
+          <fieldName>message</fieldName>
+        </message>
+        <mdc/>
+        <stackTrace>
+          <fieldName>exception</fieldName>
+        </stackTrace>
+        <pattern>
+          <pattern>{"app":"${APP_NAME}"}</pattern>
+        </pattern>
+      </providers>
+    </encoder>
+  </appender>
+
+  <logger name="bebidas_scan.app" level="INFO"/>
+  <logger name="bebidas_scan.security" level="INFO"/>
+  <logger name="bebidas_scan.audit" level="INFO"/>
+  <logger name="org.springframework.security" level="WARN"/>
+
+  <root level="${LOG_LEVEL}">
+    <appender-ref ref="JSON_CONSOLE"/>
+  </root>
+</configuration>
